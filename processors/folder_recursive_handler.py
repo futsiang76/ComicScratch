@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Tuple
 
 from parsers.file_parser import parse_folder_from_filename
 from parsers.folder_parser import parse_folder_name_lenient
+from processors.ignore_rules import filter_subdirs, is_dir_ignored
 
 
 class FolderRecursiveHandler:
@@ -39,6 +40,15 @@ class FolderRecursiveHandler:
         processed_folders = 0
         skipped_folders = 0
         
+        def _has_comic_files(path: str) -> bool:
+            """目录直接包含漫画压缩文件时返回 True（与 _collect_series_folders 一致）"""
+            try:
+                return any(f.lower().endswith(('.zip', '.cbz', '.cbr', '.rar'))
+                           for f in os.listdir(path)
+                           if os.path.isfile(os.path.join(path, f)))
+            except OSError:
+                return False
+
         def _process_directory(current_path: str, depth: int = 0):
             """递归处理目录
             
@@ -53,13 +63,15 @@ class FolderRecursiveHandler:
             
             try:
                 # 首先检查当前目录本身是否是合法的漫画文件夹
+                # （宽松解析器对任意非空名都返回真，需叠加"含漫画文件"判定，
+                #   否则根目录永远被误判为系列、递归永不发生）
                 current_dir_name = os.path.basename(current_path)
                 folder_info = parse_folder_name_lenient(current_dir_name, current_path)
                 if not folder_info:
                     # 尝试从文件名提取信息
                     folder_info = parse_folder_from_filename(current_path)
                 
-                if folder_info and depth == 0:
+                if folder_info and _has_comic_files(current_path):
                     # 检查是否是不规则文件夹
                     is_irregular = folder_info.get('from_filename', False)
                     
@@ -87,10 +99,16 @@ class FolderRecursiveHandler:
                 # 如果不是根目录系列，则正常处理子目录
                 for item in os.listdir(current_path):
                     item_path = os.path.join(current_path, item)
-                    
+
                     if not os.path.isdir(item_path):
                         continue
-                    
+
+                    # 忽略规则：命中通配符的目录不作为系列且不递归
+                    if is_dir_ignored(item):
+                        print(f"\n{'  ' * depth}⚠️  跳过忽略目录: {item}")
+                        skipped_folders += 1
+                        continue
+
                     if item.startswith("."):
                         print(f"\n{'  ' * depth}⚠️  跳过隐藏文件夹: {item}")
                         skipped_folders += 1
@@ -102,8 +120,8 @@ class FolderRecursiveHandler:
                         # 尝试从文件名提取信息
                         folder_info = parse_folder_from_filename(item_path)
                     
-                    if folder_info:
-                        # 是合法的漫画文件夹，处理它
+                    if folder_info and _has_comic_files(item_path):
+                        # 是合法的漫画文件夹（直接含漫画文件），处理它
                         total_folders += 1
                         print(f"\n{'  ' * depth}{'='*60}")
                         print(f"{'  ' * depth}📚 处理系列: {folder_info['series']}")
@@ -170,12 +188,16 @@ class FolderRecursiveHandler:
             try:
                 for item in os.listdir(current_path):
                     item_path = os.path.join(current_path, item)
-                    
+
                     if not os.path.isdir(item_path):
                         continue
-                    
+
                     stats['total_folders'] += 1
-                    
+
+                    # 忽略规则：命中通配符的目录不计入且不递归
+                    if is_dir_ignored(item):
+                        continue
+
                     if item.startswith("."):
                         stats['hidden_folders'] += 1
                         continue
@@ -186,7 +208,10 @@ class FolderRecursiveHandler:
                         # 尝试从文件名提取信息
                         folder_info = parse_folder_from_filename(item_path)
                     
-                    if folder_info:
+                    if folder_info and any(
+                            f.lower().endswith(('.zip', '.cbz', '.cbr', '.rar'))
+                            for f in os.listdir(item_path)
+                            if os.path.isfile(os.path.join(item_path, f))):
                         stats['comic_folders'] += 1
                         
                         # 统计文件夹类型
@@ -260,10 +285,14 @@ class FolderRecursiveHandler:
                 
                 for item in items:
                     item_path = os.path.join(current_path, item)
-                    
+
                     if not os.path.isdir(item_path):
                         continue
-                    
+
+                    # 忽略规则：命中通配符的目录不参与结构验证且不递归
+                    if is_dir_ignored(item):
+                        continue
+
                     if item.startswith("."):
                         continue
                     
@@ -272,7 +301,11 @@ class FolderRecursiveHandler:
                     if not folder_info:
                         folder_info = parse_folder_from_filename(item_path)
                     
-                    if folder_info:
+                    has_comic = any(
+                        f.lower().endswith(('.zip', '.cbz', '.cbr', '.rar'))
+                        for f in os.listdir(item_path)
+                        if os.path.isfile(os.path.join(item_path, f)))
+                    if folder_info and has_comic:
                         comic_folders += 1
                         
                         # 验证文件夹命名

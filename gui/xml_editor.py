@@ -116,8 +116,11 @@ def on_edit_xml_clicked(mw):
         return
 
     # 判断：父目录（含子目录）vs 单系列目录（直接含zip）
+    from processors.ignore_rules import filter_subdirs
     subdirs = [d for d in os.listdir(current_dir)
                if os.path.isdir(os.path.join(current_dir, d))]
+    # 忽略规则（设置里可配）：命中通配符的目录（如 .开头/_开头）不作为系列
+    subdirs = filter_subdirs(subdirs)
     has_zip = any(f.lower().endswith(('.zip', '.cbz'))
                   for f in os.listdir(current_dir)
                   if os.path.isfile(os.path.join(current_dir, f)))

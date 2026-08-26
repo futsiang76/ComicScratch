@@ -28,6 +28,9 @@ DEFAULT_SETTINGS = {
     "delete_after_convert": True,  # 手动格式转换成功后是否删除原文件
     "default_manga_dir": "",       # 默认漫画目录（留空则启动时提示选择）
     "remember_last_path": True,    # 记住上次路径开关（开启则启动优先用上次目录）
+    # 多系列扫描忽略规则：命中通配符的目录不作为系列处理且不再递归
+    # （fnmatch 通配：* 任意字符 ? 单字符 [abc] 字符集；匹配目录名本身，不分大小写）
+    "scan_ignore_dirs": [".*", "_*"],
     "first_run_done": False,       # 首次启动轻引导是否已完成（完成后不再弹出）
     # 赞助通道（发布者配置；留空=不显示赞助入口）
     "sponsor_enabled": False,      # 是否启用赞助入口（齿轮菜单显示「赞助支持」）
@@ -99,6 +102,7 @@ SETTINGS_ATTR_MAP = {
     "delete_after_convert": "DELETE_AFTER_CONVERT",
     "default_manga_dir": "DEFAULT_MANGA_DIR",
     "remember_last_path": "REMEMBER_LAST_PATH",
+    "scan_ignore_dirs": "SCAN_IGNORE_DIRS",
     "first_run_done": "FIRST_RUN_DONE",
     "sponsor_enabled": "SPONSOR_ENABLED",
     "sponsor_qr_path": "SPONSOR_QR_PATH",
@@ -166,6 +170,11 @@ DEFAULT_MANGA_DIR = _user_config.get("default_manga_dir",
                                      DEFAULT_SETTINGS["default_manga_dir"])
 REMEMBER_LAST_PATH = _user_config.get("remember_last_path",
                                       DEFAULT_SETTINGS["remember_last_path"])
+# 多系列扫描忽略规则（fnmatch 通配符列表，命中目录不作为系列且不递归）
+_scan_ignore_cfg = _user_config.get("scan_ignore_dirs",
+                                    DEFAULT_SETTINGS["scan_ignore_dirs"])
+SCAN_IGNORE_DIRS = _scan_ignore_cfg if isinstance(_scan_ignore_cfg, list) \
+    else list(DEFAULT_SETTINGS["scan_ignore_dirs"])
 FIRST_RUN_DONE = _user_config.get("first_run_done",
                                   DEFAULT_SETTINGS["first_run_done"])
 

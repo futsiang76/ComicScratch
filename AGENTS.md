@@ -84,12 +84,11 @@ Search before Read. Read before Edit. Edit minimally. Preserve existing architec
 
 ## Project Quick Reference
 
-- 管理文档 → `H:\obsidian-vault\ComicInfoScratcher\`（006 沿用的决策/优化文档仍可参考）
-  - DECISIONS.md — 架构决策记录
+- 管理文档 → `H:\obsidian-vault\ComicScratch\`
   - GUI优化说明.md — GUI设计说明
-  - TODO.md — 待办清单
   - 人机联调问题汇总.md — 联调待办
-- STRUCTURE.md — 本目录下的目录结构一览
+  - 用户设置持久化：user_config.json（项目根，已 gitignore）为唯一用户层配置；出厂默认在 config.py DEFAULT_SETTINGS；scan_ignore_dirs 为扫描忽略目录通配符规则
+- STRUCTURE.md — 本目录下的目录结构一览（其中 DECISIONS.md 条目一并移除）
 - 来源项目：`F:\MyProject\006_ComicInfoScratcher\`、`F:\MyProject\007_zipCoverCropper\`（只读，不修改）
 
 ## 公共 assets

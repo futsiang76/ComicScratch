@@ -281,12 +281,19 @@ def _collect_series_folders(manga_root: str) -> List[Tuple[str, Dict]]:
     from parsers.file_parser import parse_folder_from_filename
     from parsers.folder_parser import parse_folder_name_lenient
 
+    from processors.ignore_rules import get_ignore_patterns, filter_subdirs, is_dir_ignored
+
     comic_ext = ('.zip', '.cbz', '.cbr', '.rar')
     folders = []
     collected = []
+    ignore_patterns = get_ignore_patterns()
     for root, dirs, files in os.walk(manga_root):
         # 父级已是系列文件夹时跳过其后代，避免重复处理
         if any(root.startswith(parent + os.sep) for parent in collected):
+            continue
+        # 忽略规则剪枝：命中规则的目录（如 .开头/_开头）不作为系列且不再递归
+        dirs[:] = filter_subdirs(dirs, ignore_patterns)
+        if root != manga_root and is_dir_ignored(os.path.basename(root), ignore_patterns):
             continue
         if not any(f.lower().endswith(comic_ext) for f in files):
             continue

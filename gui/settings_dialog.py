@@ -7,8 +7,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFontMetrics, QPainter
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                              QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
-                             QLabel, QLineEdit, QPushButton, QSpinBox, QVBoxLayout,
-                             QWidget)
+                             QLabel, QLineEdit, QMessageBox, QPushButton,
+                             QSpinBox, QVBoxLayout, QWidget)
 
 # 各分组表单标签文本（单一来源：统一标签列宽按此集合中最长者计算）
 _LABELS = {
@@ -18,6 +18,7 @@ _LABELS = {
     "scan_author": "作者名匹配阈值 (%):",
     "scan_timeout": "请求超时时间 (秒):",
     "scan_retries": "请求重试次数:",
+    "scan_ignore": "忽略目录规则:",
     "result_format": "保存格式:",
     "result_delete": "写入后删除旧文件:",
     "dir_default": "默认漫画目录:",
@@ -119,6 +120,25 @@ class SettingsDialog(QDialog):
         self.retries_spin.setValue(config.MAX_RETRIES)
         scan_form.addRow(self._make_label(_LABELS["scan_retries"]), self.retries_spin)
 
+        # 忽略目录规则：逗号分隔通配符（fnmatch），命中目录不作为系列且不递归
+        self.ignore_dirs_edit = QLineEdit()
+        self.ignore_dirs_edit.setText(", ".join(config.SCAN_IGNORE_DIRS))
+        self.ignore_dirs_edit.setPlaceholderText("如: .*, _*, temp*")
+        # 输入框下方小字说明（默认规则 + 通配符/分隔符用法）
+        ignore_hint = QLabel(
+            '默认忽略以“.”或“_”开头的文件夹，自定义简单规则时，'
+            '以“*”为通配符，并以“,”加空格分隔开来')
+        ignore_hint.setWordWrap(True)
+        ignore_hint.setStyleSheet("color: gray; font-size: 11px;")
+        ignore_widget = QWidget()
+        ignore_layout = QVBoxLayout()
+        ignore_layout.setContentsMargins(0, 0, 0, 0)
+        ignore_layout.setSpacing(2)
+        ignore_layout.addWidget(self.ignore_dirs_edit)
+        ignore_layout.addWidget(ignore_hint)
+        ignore_widget.setLayout(ignore_layout)
+        scan_form.addRow(self._make_label(_LABELS["scan_ignore"]), ignore_widget)
+
         layout.addWidget(scan_group)
 
         # ===== 3. 扫描结果处理 =====
@@ -200,6 +220,36 @@ class SettingsDialog(QDialog):
         config.AUTHOR_MATCH_THRESHOLD = self.author_spin.value()
         config.TIMEOUT = self.timeout_spin.value()
         config.MAX_RETRIES = self.retries_spin.value()
+        # 忽略目录规则：逗号分隔 → 列表（剥引号/全角逗号/去空，保持顺序）
+        ignore_raw = self.ignore_dirs_edit.text().replace("，", ",")
+        ignore_parsed = []
+        for p in ignore_raw.split(","):
+            p = p.strip().strip("'\"“”")
+            if p:
+                ignore_parsed.append(p)
+        # 保存前校验：致命问题（如匹配一切目录）默认返回修改；提示问题可仍然保存
+        from processors.ignore_rules import find_rule_issues
+        blocking, warnings = find_rule_issues(ignore_parsed)
+        if blocking or warnings:
+            lines = blocking + warnings
+            msg = QMessageBox(self)
+            msg.setWindowTitle("忽略目录规则提示")
+            msg.setText("\n".join(f"• {line}" for line in lines))
+            if blocking:
+                msg.setInformativeText("是否仍然保存这些规则？")
+                msg.setIcon(QMessageBox.Icon.Warning)
+                save_btn = msg.addButton("仍然保存", QMessageBox.ButtonRole.AcceptRole)
+                msg.addButton("返回修改", QMessageBox.ButtonRole.RejectRole)
+                msg.setDefaultButton(msg.buttons()[1])  # 默认返回修改
+            else:
+                msg.setInformativeText("是否仍然保存？")
+                msg.setIcon(QMessageBox.Icon.Information)
+                save_btn = msg.addButton("仍然保存", QMessageBox.ButtonRole.AcceptRole)
+                msg.addButton("返回修改", QMessageBox.ButtonRole.RejectRole)
+            msg.exec()
+            if msg.clickedButton() is not save_btn:
+                return  # 用户选择返回修改，不关闭对话框
+        config.SCAN_IGNORE_DIRS = ignore_parsed
         config.CROP_MEMORY_ENABLED = self.crop_memory_switch.isChecked()
         config.SAVE_FORMAT = self.save_format_combo.currentData()
         config.DELETE_AFTER_CONVERT = self.delete_after_convert_switch.isChecked()
@@ -212,6 +262,7 @@ class SettingsDialog(QDialog):
             "author_match_threshold": config.AUTHOR_MATCH_THRESHOLD,
             "timeout": config.TIMEOUT,
             "max_retries": config.MAX_RETRIES,
+            "scan_ignore_dirs": config.SCAN_IGNORE_DIRS,
             "crop_memory_enabled": config.CROP_MEMORY_ENABLED,
             "save_format": config.SAVE_FORMAT,
             "delete_after_convert": config.DELETE_AFTER_CONVERT,

@@ -5,7 +5,6 @@ ComicScratch/
 ├── config.py                 # 配置和常量
 ├── secrets.py                # API密钥（本地，不提交）
 ├── AGENTS.md                 # Agent 工作规则
-├── DECISIONS.md              # 架构决策记录
 ├── GUI_OPTIMIZATION_GUIDE.md # GUI优化说明
 ├── STRUCTURE.md              # 本文件
 ├── TODO.md                   # 待办清单
