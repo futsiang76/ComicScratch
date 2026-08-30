@@ -20,7 +20,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from parsers.file_parser import (generate_smart_title,
                                  parse_volume_from_filename)
-from processors.utils import file_tag, thread_tag, zip_lock, zip_lock_multi
+from processors.utils import (file_tag, set_hidden_attr, thread_tag,
+                              zip_lock, zip_lock_multi)
 from processors.xml_generator import XMLGenerator
 
 def _check_seven_zip_available() -> str:
@@ -110,6 +111,7 @@ def _add_with_zipfile(zip_path: str, file_content: str, file_name: str,
         temp_dir = os.path.join(drive + os.sep, ".comicscratch_tmp")
         try:
             os.makedirs(temp_dir, exist_ok=True)
+            set_hidden_attr(temp_dir)
             temp_zip_path = os.path.join(temp_dir, f"{uuid.uuid4().hex[:8]}.tmp")
         except OSError:
             # 建盘根 temp 目录失败（只读盘根等）回退到目标 zip 同目录

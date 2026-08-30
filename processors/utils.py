@@ -12,6 +12,24 @@ import time
 from contextlib import ExitStack, contextmanager
 from typing import Dict, List, Optional, Tuple
 
+
+def set_hidden_attr(dir_path: str) -> None:
+    """给目录设置 Windows 隐藏属性（FILE_ATTRIBUTE_HIDDEN = 0x2）
+
+    仅 Windows 生效（os.name == 'nt'）；非 Windows 直接返回——点号目录在
+    Unix 已足够隐藏。目录不存在时先 makedirs 再设置。设置失败静默忽略：
+    隐藏属性只是浏览体验优化，绝不影响写盘主流程、绝不抛异常。
+    """
+    if os.name != "nt":
+        return
+    try:
+        os.makedirs(dir_path, exist_ok=True)
+        import ctypes
+        ctypes.windll.kernel32.SetFileAttributesW(dir_path, 0x2)
+    except OSError:
+        pass
+
+
 # ---------------------------------------------------------------------------
 # zip 写盘文件级互斥锁（多实例安全）
 #
@@ -53,6 +71,7 @@ def _zip_lock_path(zip_path: str) -> str:
     lock_dir = os.path.join(drive + os.sep, ".comicscratch_tmp")
     try:
         os.makedirs(lock_dir, exist_ok=True)
+        set_hidden_attr(lock_dir)
     except OSError:
         # 盘根只读等：回退到目标 zip 同目录（与 _add_with_zipfile 临时文件回退一致）
         lock_dir = os.path.dirname(abs_path)
