@@ -54,6 +54,24 @@ def _apply_author_fill(writer: str, penciller: str) -> tuple:
         return penciller, penciller
     return writer, penciller
 
+def _volume_date_parts(volume_dates: Dict, volume: str) -> Tuple[str, str, str]:
+    """按卷号取该卷发售日并拆 (year, month, day)；未命中返回 ("", "", "")
+
+    volume 来自 parse_volume_from_filename（两位零填充，如 "01"），
+    _volume_dates 的键为 int 归一化字符串（"1"），故统一 int() 对齐；
+    整条命中即整条使用（不做逐字段回退，避免混入其它卷的年月日）。
+    """
+    if not volume_dates or not volume or not str(volume).isdigit():
+        return "", "", ""
+    date = str(volume_dates.get(str(int(volume)), "") or "")
+    if not date:
+        return "", "", ""
+    parts = date.split("-")
+    return (parts[0].strip(),
+            parts[1].strip() if len(parts) > 1 else "",
+            parts[2].strip() if len(parts) > 2 else "")
+
+
 def create_result_dict(folder_path: str, folder_info: Dict, 
                        comic_info_base: Optional[Dict], selected_result: Optional[Dict],
                        skipped: bool, process_status: str, source: str = "bangumi") -> Dict:
@@ -85,6 +103,12 @@ def create_result_dict(folder_path: str, folder_info: Dict,
     try:
         from parsers.file_parser import (generate_smart_title,
                                          parse_volume_from_filename)
+        # 逐卷发售日 {卷号: "YYYY-MM-DD"}（bangumi 源才有，刷不到为 {}）
+        volume_dates = (comic_info_base or {}).get("_volume_dates") or {}
+        # 系列级日期 = 系列 date（兜底：命中不到本卷时沿用）
+        series_date = ((comic_info_base or {}).get("Year", "") or "",
+                       (comic_info_base or {}).get("Month", "") or "",
+                       (comic_info_base or {}).get("Day", "") or "")
         # 收集漫画文件及大小
         comic_files = []
         for f in os.listdir(folder_path):
@@ -97,11 +121,16 @@ def create_result_dict(folder_path: str, folder_info: Dict,
             smart_title_result = generate_smart_title(f, folder_info.get("series", ""), folder_info)
             file_titles[f] = smart_title_result[0]
             vol_info = parse_volume_from_filename(f)
+            vol = vol_info.get("number", "")
+            # 命中本卷 → 用本卷发售日；未命中/无 _volume_dates → 沿用系列级
+            vol_date = _volume_date_parts(volume_dates, vol)
+            if vol_date == ("", "", ""):
+                vol_date = series_date
             file_details[f] = {
-                "volume": vol_info.get("number", ""),
-                "year": comic_info_base.get("Year", "") if comic_info_base else "",
-                "month": comic_info_base.get("Month", "") if comic_info_base else "",
-                "day": comic_info_base.get("Day", "") if comic_info_base else "",
+                "volume": vol,
+                "year": vol_date[0],
+                "month": vol_date[1],
+                "day": vol_date[2],
                 "summary": comic_info_base.get("Summary", "") if comic_info_base else ""
             }
         # 提取每卷封面信息（尺寸 + 比例异常标记），供 P2 结果页展示

@@ -137,7 +137,7 @@ class MatchFailureHandler:
         if success and selected_result:
             detail = self.fetcher.get_manga_detail(selected_result["id"])
             if detail:
-                comic_info_base = self.template_handler.create_bangumi_template(detail, folder_info)
+                comic_info_base = self.template_handler.create_bangumi_template(detail, folder_info, self.fetcher)
                 return {
                     "comic_info_base": comic_info_base,
                     "selected_result": selected_result,
@@ -222,7 +222,7 @@ class MatchFailureHandler:
             print(f"{'  ' * depth}✅ 手动搜索匹配成功: {selected_result.get('name_cn') or selected_result.get('name')}")
             detail = self.fetcher.get_manga_detail(selected_result["id"])
             if detail:
-                comic_info_base = self.template_handler.create_bangumi_template(detail, folder_info)
+                comic_info_base = self.template_handler.create_bangumi_template(detail, folder_info, self.fetcher)
                 return {"comic_info_base": comic_info_base, "selected_result": selected_result, "skip_files": False}
             else:
                 comic_info_base = self.template_handler.create_local_template(folder_info)
@@ -242,7 +242,7 @@ class MatchFailureHandler:
             elif isinstance(selected_result, dict) and "id" in selected_result:
                 detail = self.fetcher.get_manga_detail(selected_result["id"])
                 if detail:
-                    comic_info_base = self.template_handler.create_bangumi_template(detail, folder_info)
+                    comic_info_base = self.template_handler.create_bangumi_template(detail, folder_info, self.fetcher)
                     return {"comic_info_base": comic_info_base, "selected_result": selected_result, "skip_files": False}
                 else:
                     comic_info_base = self.template_handler.create_local_template(folder_info)

@@ -366,6 +366,11 @@ class BangumiFetcher:
         self._persons_cache[subject_id] = persons
         return persons
 
+    def get_volume_dates(self, subject_id: int) -> Dict[str, str]:
+        """逐卷单行本发售日 {卷号: "YYYY-MM-DD"}（委托 bangumi_volume_dates，实例级缓存）"""
+        from .bangumi_volume_dates import collect_volume_dates
+        return collect_volume_dates(self, subject_id)
+
     def extract_bangumi_authors(self, detail: Dict,
                                 persons: Optional[List[Dict]] = None) -> List[str]:
         """包装方法：委托到 author_utils（persons 可选并入，跨端点合并）"""

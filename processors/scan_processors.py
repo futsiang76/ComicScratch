@@ -176,7 +176,7 @@ def process_normal_folder(folder_path: str, folder_info: Dict, fetcher, depth: i
         
         # 获取详细信息
         detail = fetcher.get_manga_detail(selected_result["id"])
-        comic_info_base = template_handler.create_bangumi_template(detail, folder_info)
+        comic_info_base = template_handler.create_bangumi_template(detail, folder_info, fetcher)
         
         return {
             "comic_info_base": comic_info_base,
@@ -228,7 +228,7 @@ def process_normal_folder(folder_path: str, folder_info: Dict, fetcher, depth: i
             # 正常选择，使用Bangumi信息
             # 获取详细信息
             detail = fetcher.get_manga_detail(selected_result["id"])
-            comic_info_base = template_handler.create_bangumi_template(detail, folder_info)
+            comic_info_base = template_handler.create_bangumi_template(detail, folder_info, fetcher)
             
             return {
                 "comic_info_base": comic_info_base,
@@ -276,7 +276,7 @@ def _handle_search_failure_gui(folder_info: Dict, alt_keywords: List[str], fetch
                       "name_cn": detail.get("name_cn", ""),
                       "rating": detail.get("rating", {})}
             print(f"{indent}✅ ID 查找成功: {result.get('name_cn') or result.get('name')}")
-            comic_info_base = template_handler.create_bangumi_template(detail, folder_info)
+            comic_info_base = template_handler.create_bangumi_template(detail, folder_info, fetcher)
             return {"comic_info_base": comic_info_base, "selected_result": result, "skip_files": False}
         else:
             print(f"{indent}❌ 未找到 ID 为 {subject_id} 的作品，使用本地信息")
@@ -318,7 +318,7 @@ def _handle_search_failure_gui(folder_info: Dict, alt_keywords: List[str], fetch
             print(f"{indent}✅ 手动搜索匹配成功: {selected_result.get('name_cn') or selected_result.get('name')}")
             detail = fetcher.get_manga_detail(selected_result["id"])
             if detail:
-                comic_info_base = template_handler.create_bangumi_template(detail, folder_info)
+                comic_info_base = template_handler.create_bangumi_template(detail, folder_info, fetcher)
                 return {"comic_info_base": comic_info_base, "selected_result": selected_result, "skip_files": False}
             else:
                 comic_info_base = template_handler.create_local_template(folder_info)
@@ -338,7 +338,7 @@ def _handle_search_failure_gui(folder_info: Dict, alt_keywords: List[str], fetch
             elif isinstance(selected_result, dict) and "id" in selected_result:
                 detail = fetcher.get_manga_detail(selected_result["id"])
                 if detail:
-                    comic_info_base = template_handler.create_bangumi_template(detail, folder_info)
+                    comic_info_base = template_handler.create_bangumi_template(detail, folder_info, fetcher)
                     return {"comic_info_base": comic_info_base, "selected_result": selected_result, "skip_files": False}
                 else:
                     comic_info_base = template_handler.create_local_template(folder_info)

@@ -33,7 +33,7 @@ def build_comic_info_from_id(fetcher: BangumiFetcher, bangumi_id: int,
     if not detail:
         return None
     template_handler = create_xml_template_handler()
-    comic_info_base = template_handler.create_bangumi_template(detail, folder_info)
+    comic_info_base = template_handler.create_bangumi_template(detail, folder_info, fetcher)
     selected_result = {
         "id": bangumi_id,
         "name": detail.get("name", ""),

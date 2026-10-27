@@ -125,15 +125,20 @@ def test_locked_overrides_year_month_summary():
     assert info["Notes"] == "ComicScratcherLocked"
 
 
-def test_unlocked_keeps_series_summary():
-    """is_locked=False → year/month/summary 保持系列级，Notes 为空"""
+def test_unlocked_detail_dates_win_summary_kept():
+    """is_locked=False → year/month 仍按 detail（逐卷本卷日期）；summary 保持系列级、Notes 空
+
+    逐卷发售日任务（t_da6165cd）改变语义：detail 的年月日不再要求 is_locked，
+    因为 file_details 每卷已带本卷日期（未命中时等于系列值，语义等价）；
+    summary/tags 等其它锁定字段仍只在 is_locked 时被 detail 覆盖。
+    """
     info = build_file_comicinfo(
         {"series": "x", "year": "2020", "month": "1", "summary": "系列级摘要"},
         "Vol 01.zip",
         detail={"year": "2024", "month": "7", "summary": "单卷独立摘要"},
         is_locked=False)
-    assert info["Year"] == "2020"
-    assert info["Month"] == "1"
+    assert info["Year"] == "2024"
+    assert info["Month"] == "7"
     assert info["Summary"] == "系列级摘要"
     assert info["Notes"] == ""
 

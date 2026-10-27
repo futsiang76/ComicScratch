@@ -97,12 +97,15 @@ class XMLTemplateHandler:
         
         return template
     
-    def create_bangumi_template(self, bangumi_data: Dict[str, Any], folder_info: Dict[str, Any]) -> Dict[str, Any]:
+    def create_bangumi_template(self, bangumi_data: Dict[str, Any], folder_info: Dict[str, Any],
+                                volume_fetcher=None) -> Dict[str, Any]:
         """创建Bangumi数据模板
         
         Args:
             bangumi_data: Bangumi数据字典
             folder_info: 文件夹信息字典
+            volume_fetcher: 可选 BangumiFetcher 实例；传入则额外挂逐卷发售日
+                            base["_volume_dates"]（同一实例内缓存，扫描应复用同一个）
             
         Returns:
             Dict[str, Any]: 填充Bangumi数据的ComicInfo字典
@@ -177,7 +180,15 @@ class XMLTemplateHandler:
         release_date = resolve_release_date(bangumi_data)
         if release_date:
             template.update(self._extract_year_month(release_date))
-        
+
+        # 逐卷单行本发售日 {卷号: "YYYY-MM-DD"} 挂到 base；刷不到为 {}
+        # （volume_fetcher 可选：不传则不加该键，行为与改动前完全一致；
+        #   注意不能复用本函数内为取 persons 而新建的局部 fetcher —— 那是每次新建的
+        #   persons 专用实例，没有跨调用缓存）
+        if volume_fetcher is not None:
+            from models.bangumi_volume_dates import attach_volume_dates
+            attach_volume_dates(template, volume_fetcher, bangumi_data.get("id"))
+
         return template
     
     def create_local_template(self, folder_info: Dict[str, Any]) -> Dict[str, Any]:

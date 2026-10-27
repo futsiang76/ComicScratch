@@ -295,16 +295,17 @@ def build_file_comicinfo(result: Optional[Dict], filename: str, *,
             filename, result.get("series", ""), folder_info)[0]
     # Volume/Number：detail 或文件名解析
     apply_volume_number(file_comic_info, filename, detail)
-    # 锁住的文件：detail 覆盖 year/month/day/summary（Year/Month/Day 经清洗，防非数字字符）
-    if is_locked:
-        if detail.get("year"):
-            file_comic_info["Year"] = clean_year(detail["year"])
-        if detail.get("month"):
-            file_comic_info["Month"] = clean_month(detail["month"])
-        if detail.get("day"):
-            file_comic_info["Day"] = clean_day(detail["day"])
-        if detail.get("summary"):
-            file_comic_info["Summary"] = detail["summary"]
+    # Year/Month/Day：detail 无条件优先（逐卷已带本卷值；未命中时它等于系列值，语义等价）
+    # 空值不覆盖，保留 build_full_comicinfo_dict 的系列值；清洗防非数字字符
+    if detail.get("year"):
+        file_comic_info["Year"] = clean_year(detail["year"])
+    if detail.get("month"):
+        file_comic_info["Month"] = clean_month(detail["month"])
+    if detail.get("day"):
+        file_comic_info["Day"] = clean_day(detail["day"])
+    # 锁住的文件：detail 覆盖 summary（summary/tags 等其它锁定字段行为不变）
+    if is_locked and detail.get("summary"):
+        file_comic_info["Summary"] = detail["summary"]
     # Notes 锁定标记
     file_comic_info["Notes"] = "ComicScratcherLocked" if is_locked else ""
     return file_comic_info
