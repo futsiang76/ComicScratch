@@ -44,6 +44,25 @@ def clean_month(month_value: Any) -> str:
     return match.group(0) if match else ""
 
 
+def clean_day(day_value: Any) -> str:
+    """清洗 ComicInfo 的 Day 字段：只保留 1-31 的日（如 5 或 25），否则返回空字符串。
+
+    与 clean_year/clean_month 同理：Day 在 Komga 中同为数字类型，带非数字字符会导致
+    解析失败。除数字校验外还做范围校验——"0"、"32" 这类非法日一律清空（空串不写标签）。
+    传入完整日期串（如 "2008-09-25"）时抽到 2008，超出范围同样清空。
+    """
+    if day_value is None:
+        return ""
+    text = str(day_value).strip()
+    if not text:
+        return ""
+    match = re.search(r"\d+", text)
+    if not match:
+        return ""
+    digits = match.group(0)
+    return digits if 1 <= int(digits) <= 31 else ""
+
+
 class XMLGenerator:
     """XML生成器类"""
     
@@ -65,7 +84,7 @@ class XMLGenerator:
                 # 按特定顺序添加字段
         fields_order = [
             "Title", "Series", "Volume", "Number", "Count", "Summary", "Notes",
-            "Year", "Month", "Writer", "Penciller", "Inker", "Colorist", "Letterer",
+            "Year", "Month", "Day", "Writer", "Penciller", "Inker", "Colorist", "Letterer",
             "CoverArtist", "Editor", "Publisher", "Genre", "Web", "PageCount",
             "LanguageISO", "Format", "BlackAndWhite", "Manga", "AgeRating",
             "Tags", "Status", "Rating"
@@ -276,12 +295,14 @@ def build_file_comicinfo(result: Optional[Dict], filename: str, *,
             filename, result.get("series", ""), folder_info)[0]
     # Volume/Number：detail 或文件名解析
     apply_volume_number(file_comic_info, filename, detail)
-    # 锁住的文件：detail 覆盖 year/month/summary（Year/Month 经清洗，防非数字字符）
+    # 锁住的文件：detail 覆盖 year/month/day/summary（Year/Month/Day 经清洗，防非数字字符）
     if is_locked:
         if detail.get("year"):
             file_comic_info["Year"] = clean_year(detail["year"])
         if detail.get("month"):
             file_comic_info["Month"] = clean_month(detail["month"])
+        if detail.get("day"):
+            file_comic_info["Day"] = clean_day(detail["day"])
         if detail.get("summary"):
             file_comic_info["Summary"] = detail["summary"]
     # Notes 锁定标记
@@ -339,6 +360,7 @@ def _apply_result_fields(info: Dict[str, Any], result: Dict[str, Any]) -> None:
     info["Colorist"] = str(result.get("colorist", ""))
     info["Year"] = clean_year(result.get("year", ""))
     info["Month"] = clean_month(result.get("month", ""))
+    info["Day"] = clean_day(result.get("day", ""))
     info["Status"] = str(result.get("status", ""))
     info["Summary"] = str(result.get("summary", ""))
     info["Tags"] = str(result.get("tags", ""))

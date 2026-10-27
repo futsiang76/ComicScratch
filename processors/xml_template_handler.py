@@ -18,6 +18,28 @@ def _with_suffix(value: str, suffix: str) -> str:
     return value
 
 
+def resolve_release_date(detail: Dict[str, Any]) -> str:
+    """取单行本发售日原始串：Bangumi 顶层 date 优先，为空时用 infobox「发售日」兜底。
+
+    只认顶层 date 与 infobox「发售日」；绝不用 infobox「开始」/「结束」——
+    那两个是连载起止，不是单行本发售日。取不到返回空字符串。
+    """
+    if not detail:
+        return ""
+    date = str(detail.get("date") or "").strip()
+    if date:
+        return date
+    for item in detail.get("infobox") or []:
+        if item.get("key") != "发售日":
+            continue
+        value = item.get("value", "")
+        if isinstance(value, list):
+            value = next((v.get("v", "") for v in value
+                          if isinstance(v, dict) and v.get("v")), "")
+        return str(value or "").strip()
+    return ""
+
+
 class XMLTemplateHandler:
     """XML模板处理器类"""
     
@@ -151,10 +173,10 @@ class XMLTemplateHandler:
             remaining.append(template.get("Status", ""))
             template["Tags"] = ", ".join(dict.fromkeys(remaining))
         
-        # 处理年份信息
-        if bangumi_data.get("date"):
-            year_month = self._extract_year_month(bangumi_data["date"])
-            template.update(year_month)
+        # 处理年份信息（Year/Month/Day 单一入口；顶层 date 为空时 infobox「发售日」兜底）
+        release_date = resolve_release_date(bangumi_data)
+        if release_date:
+            template.update(self._extract_year_month(release_date))
         
         return template
     
@@ -282,26 +304,28 @@ class XMLTemplateHandler:
         return authors
     
     def _extract_year_month(self, date_str: str) -> Dict[str, str]:
-        """从日期字符串中提取年份和月份
-        
+        """从日期字符串中提取年、月、日
+
         Args:
-            date_str: 日期字符串
-            
+            date_str: 日期字符串（标准格式 YYYY-MM-DD；缺段时对应项为空串）
+
         Returns:
-            Dict[str, str]: 年份和月份字典
+            Dict[str, str]: {"Year": 年, "Month": 月, "Day": 日}，取不到的项为空串
         """
         # 惰性导入：xml_generator 模块级 import 本模块，此处不能再反向模块级 import
-        from processors.xml_generator import clean_month, clean_year
+        from processors.xml_generator import clean_day, clean_month, clean_year
 
-        year_month = {"Year": "", "Month": ""}
+        year_month = {"Year": "", "Month": "", "Day": ""}
 
         if date_str:
-            # 尝试解析日期格式：YYYY-MM-DD（Year/Month 再经清洗，防「年」等非数字字符）
+            # 尝试解析日期格式：YYYY-MM-DD（Year/Month/Day 再经清洗，防「年」等非数字字符）
             parts = date_str.split("-")
             if len(parts) >= 1:
                 year_month["Year"] = clean_year(parts[0])
             if len(parts) >= 2:
                 year_month["Month"] = clean_month(parts[1])
+            if len(parts) >= 3:
+                year_month["Day"] = clean_day(parts[2])
 
         return year_month
     

@@ -116,10 +116,16 @@ class TitleEditDialog(QDialog):
             volume_item = QTableWidgetItem(detail.get("volume", ""))
             self.title_table.setItem(row, 2, volume_item)
 
-            # 发行时间列
+            # 发行时间列（有日显示 YYYY-MM-DD，无日保持 YYYY-MM）
             year = detail.get("year", "")
             month = detail.get("month", "")
-            date_str = f"{year}-{month}" if year and month else year
+            day = detail.get("day", "")
+            if year and month and day:
+                date_str = f"{year}-{month}-{day}"
+            elif year and month:
+                date_str = f"{year}-{month}"
+            else:
+                date_str = year
             date_item = QTableWidgetItem(date_str)
             # 如果锁定，用不同背景色
             if is_locked:
@@ -366,16 +372,20 @@ class TitleEditDialog(QDialog):
             date_text = self._get_cell_text(row, 3).strip()
             summary_text = self._get_cell_text(row, 4).strip()
             tags_text = self._get_cell_text(row, 5).strip()
-            year, month = "", ""
+            year, month, day = "", "", ""
             if date_text:
-                parts = date_text.split("-", 1)
+                # 三段解析：YYYY-MM-DD 或 YYYY-MM（无日时 day 留空）
+                parts = date_text.split("-", 2)
                 year = parts[0].strip()
                 if len(parts) > 1:
                     month = parts[1].strip()
+                if len(parts) > 2:
+                    day = parts[2].strip()
             file_details[filename] = {
                 "volume": volume_text,
                 "year": year,
                 "month": month,
+                "day": day,
                 "summary": summary_text,
                 "tags": tags_text
             }

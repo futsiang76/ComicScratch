@@ -101,6 +101,7 @@ def create_result_dict(folder_path: str, folder_info: Dict,
                 "volume": vol_info.get("number", ""),
                 "year": comic_info_base.get("Year", "") if comic_info_base else "",
                 "month": comic_info_base.get("Month", "") if comic_info_base else "",
+                "day": comic_info_base.get("Day", "") if comic_info_base else "",
                 "summary": comic_info_base.get("Summary", "") if comic_info_base else ""
             }
         # 提取每卷封面信息（尺寸 + 比例异常标记），供 P2 结果页展示
@@ -143,6 +144,7 @@ def create_result_dict(folder_path: str, folder_info: Dict,
         "colorist": comic_info_base.get("Colorist", "") if comic_info_base else "",
         "year": comic_info_base.get("Year", "") if comic_info_base else "",
         "month": comic_info_base.get("Month", "") if comic_info_base else "",
+        "day": comic_info_base.get("Day", "") if comic_info_base else "",
         "bangumi_id": str(selected_result.get("id", "")) if (selected_result and source == "bangumi") else "",
         "source_id": str(selected_result.get("id", "")) if (selected_result and source in ("manhuagui", "comicvine")) else "",
         "source_url": selected_result.get("url", "") if selected_result else "",
@@ -234,6 +236,7 @@ def create_result_dict_from_xml(folder_path: str, folder_info: Dict,
                     "number": file_xml.get("Number", ""),
                     "year": file_xml.get("Year", ""),
                     "month": file_xml.get("Month", ""),
+                    "day": file_xml.get("Day", ""),
                     "summary": file_xml.get("Summary", "")
                 }
                 # SQLite 未命中时，从 XML Notes 恢复锁定状态
@@ -249,6 +252,7 @@ def create_result_dict_from_xml(folder_path: str, folder_info: Dict,
                     "volume": vol_info.get("number", ""),
                     "year": comic_info_base.get("Year", "") if comic_info_base else "",
                     "month": comic_info_base.get("Month", "") if comic_info_base else "",
+                    "day": comic_info_base.get("Day", "") if comic_info_base else "",
                     "summary": comic_info_base.get("Summary", "") if comic_info_base else ""
                 }
                 # 无 XML 也检查 SQLite 缓存
@@ -277,6 +281,7 @@ def create_result_dict_from_xml(folder_path: str, folder_info: Dict,
         "colorist": comic_info_base.get("Colorist", "") if comic_info_base else "",
         "year": comic_info_base.get("Year", "") if comic_info_base else "",
         "month": comic_info_base.get("Month", "") if comic_info_base else "",
+        "day": comic_info_base.get("Day", "") if comic_info_base else "",
         "bangumi_id": str(selected_result.get("id", "")) if selected_result else "",
         "web": comic_info_base.get("Web", "") if comic_info_base else "",
         "publisher": comic_info_base.get("Publisher", "") if comic_info_base else "",

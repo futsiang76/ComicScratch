@@ -102,7 +102,7 @@ class EditDialog(QDialog):
         # Web 完整链接（固定标签，不区分数据源）
         self._add_line_field(form_layout, "Web:", "web_edit", self.state.web)
 
-        # 发行时间（年月分列）
+        # 发行日期（年月日同行）
         year_month_layout = QHBoxLayout()
         self.year_edit = QLineEdit(self.state.year)
         self.year_edit.setPlaceholderText("年")
@@ -115,8 +115,14 @@ class EditDialog(QDialog):
         self.month_edit.setMaximumWidth(60)
         self.month_edit.setStyleSheet(_FIELD_STYLE)
         year_month_layout.addWidget(self.month_edit)
+        year_month_layout.addWidget(QLabel("-"))
+        self.day_edit = QLineEdit(self.state.day)
+        self.day_edit.setPlaceholderText("日")
+        self.day_edit.setMaximumWidth(60)  # 宽度同月框
+        self.day_edit.setStyleSheet(_FIELD_STYLE)
+        year_month_layout.addWidget(self.day_edit)
         year_month_layout.addStretch()
-        form_layout.addRow("发行时间:", year_month_layout)
+        form_layout.addRow("发行日期:", year_month_layout)
 
         self._add_combo_field(form_layout, "状态:", "status_combo",
                               ["", "Completed", "Ongoing"], self.state.status)
@@ -314,6 +320,7 @@ class EditDialog(QDialog):
         self.web_edit.setText(self.state.web)
         self.year_edit.setText(self.state.year)
         self.month_edit.setText(self.state.month)
+        self.day_edit.setText(self.state.day)
         self.status_combo.setCurrentText(self.state.status)
         self.summary_edit.setPlainText(self.state.summary)
         self.genre_edit.setText(self.state.genre)
@@ -363,9 +370,10 @@ class EditDialog(QDialog):
         super().accept()
 
     def get_data(self) -> Dict:
-        """获取编辑后的数据，未锁定卷自动同步系列级 year/month/summary"""
+        """获取编辑后的数据，未锁定卷自动同步系列级 year/month/day/summary"""
         series_year = self.year_edit.text().strip()
         series_month = self.month_edit.text().strip()
+        series_day = self.day_edit.text().strip()
         series_summary = self.summary_edit.toPlainText().strip()
 
         # 同步未锁定卷
@@ -376,6 +384,8 @@ class EditDialog(QDialog):
                     detail["year"] = series_year
                 if series_month:
                     detail["month"] = series_month
+                if series_day:
+                    detail["day"] = series_day
                 if series_summary:
                     detail["summary"] = series_summary
 
@@ -388,6 +398,7 @@ class EditDialog(QDialog):
             "web": self.web_edit.text(),
             "year": series_year,
             "month": series_month,
+            "day": series_day,
             "status": self.status_combo.currentText(),
             "summary": series_summary,
             "genre": self.genre_edit.text(),

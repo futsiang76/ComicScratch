@@ -33,6 +33,7 @@ def _xml_data_to_edit_fields(xml_data: dict) -> dict:
         "colorist": xml_data.get("Colorist", ""),
         "year": xml_data.get("Year", ""),
         "month": xml_data.get("Month", ""),
+        "day": xml_data.get("Day", ""),
         "status": xml_data.get("Status", ""),
         "summary": xml_data.get("Summary", ""),
         "genre": xml_data.get("Genre", ""),
@@ -199,7 +200,7 @@ def on_edit_xml_clicked(mw):
     has_changes = any(
         str(original_data.get(k, "")).strip() != str(updated_data.get(k, "")).strip()
         for k in ["series", "count", "writer", "penciller", "colorist",
-                  "year", "month", "status", "summary", "genre", "tags", "manga"]
+                  "year", "month", "day", "status", "summary", "genre", "tags", "manga"]
     )
     if not has_changes:
         print("ℹ️   无实际修改，跳过保存")

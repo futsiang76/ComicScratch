@@ -22,6 +22,7 @@ class EditState:
         self.web = data.get("web", "")
         self.year = data.get("year", "")
         self.month = data.get("month", "")
+        self.day = data.get("day", "")
         self.status = data.get("status", "")
         self.summary = data.get("summary", "")
         self.tags = data.get("tags", "")
@@ -30,7 +31,7 @@ class EditState:
 
         # Volume-level data
         self.file_titles = data.get("file_titles", {})  # {filename: title}
-        self.file_details = data.get("file_details", {})  # {filename: {volume, year, month, summary}}
+        self.file_details = data.get("file_details", {})  # {filename: {volume, year, month, day, summary}}
         self.covers = data.get("covers", {})  # {filename: {path, width, height, ratio_ok}}
 
         # Lock states
@@ -89,6 +90,7 @@ class EditState:
             "web": self.web,
             "year": self.year,
             "month": self.month,
+            "day": self.day,
             "status": self.status,
             "summary": self.summary,
             "tags": self.tags,
@@ -113,6 +115,7 @@ class EditState:
             "web": self.web,
             "year": self.year,
             "month": self.month,
+            "day": self.day,
             "status": self.status,
             "summary": self.summary,
             "tags": self.tags,

@@ -18,6 +18,7 @@ def test_edit_dialog_fields_exist(qtbot):
     assert isinstance(dialog.web_edit, QLineEdit)
     assert isinstance(dialog.year_edit, QLineEdit)
     assert isinstance(dialog.month_edit, QLineEdit)
+    assert isinstance(dialog.day_edit, QLineEdit)
     assert isinstance(dialog.status_combo, QComboBox)
     assert isinstance(dialog.summary_edit, QTextEdit)
     assert isinstance(dialog.tags_edit, QLineEdit)
@@ -66,3 +67,19 @@ def test_edit_dialog_get_data(qtbot):
     result = dialog.get_data()
     assert result["series"] == "新系列"
     assert result["writer"] == "新作者"
+
+
+def test_edit_dialog_day_field_roundtrip(qtbot):
+    """发行日期三格：加载 day、保存回写 result['day']，并同步未锁定卷的 file_details"""
+    data = {"series": "某系列", "year": "2008", "month": "9", "day": "25",
+            "file_titles": {"Vol 01.zip": "某卷"},
+            "file_details": {"Vol 01.zip": {"volume": "1"}},
+            "locked_files": set()}
+    dialog = EditDialog(data)
+    qtbot.addWidget(dialog)
+
+    assert dialog.day_edit.text() == "25"
+    result = dialog.get_data()
+    assert result["day"] == "25"
+    assert result["file_details"]["Vol 01.zip"]["day"] == "25"
+    assert result["file_details"]["Vol 01.zip"]["month"] == "9"

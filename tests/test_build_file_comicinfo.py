@@ -113,13 +113,14 @@ def test_volume_number_from_filename():
 # ---------- 锁定字段 ----------
 
 def test_locked_overrides_year_month_summary():
-    """is_locked=True → year/month/summary 被 detail 覆盖，Notes 写锁定标记"""
-    detail = {"year": "2024", "month": "7", "summary": "单卷独立摘要"}
+    """is_locked=True → year/month/day/summary 被 detail 覆盖，Notes 写锁定标记"""
+    detail = {"year": "2024", "month": "7", "day": "15", "summary": "单卷独立摘要"}
     info = build_file_comicinfo(
         {"series": "x", "year": "2020", "month": "1", "summary": "系列级摘要"},
         "Vol 01.zip", detail=detail, is_locked=True)
     assert info["Year"] == "2024"
     assert info["Month"] == "7"
+    assert info["Day"] == "15"
     assert info["Summary"] == "单卷独立摘要"
     assert info["Notes"] == "ComicScratcherLocked"
 
@@ -135,6 +136,13 @@ def test_unlocked_keeps_series_summary():
     assert info["Month"] == "1"
     assert info["Summary"] == "系列级摘要"
     assert info["Notes"] == ""
+
+
+def test_series_day_applied_to_unlocked_file():
+    """result 的 day 经统一入口写入 Day（未锁定卷继承系列级值）"""
+    info = build_file_comicinfo({"series": "x", "year": "2008", "month": "9",
+                                 "day": "25"}, "Vol 01.zip")
+    assert info["Day"] == "25"
 
 
 def test_notes_unlocked_empty():

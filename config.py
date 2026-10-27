@@ -236,6 +236,7 @@ COMICINFO_TEMPLATE = {
     "Notes": "",           # 备注
     "Year": "",            # 年份
     "Month": "",           # 月份
+    "Day": "",             # 日（单行本发售日；取不到留空，XML 中整行不写）
     "Writer": "",          # 编剧
     "Penciller": "",       # 画师
     "Inker": "",           # 墨线师

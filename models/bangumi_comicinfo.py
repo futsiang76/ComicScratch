@@ -112,4 +112,13 @@ def build_comicinfo(detail: Dict, folder_info: Dict,
                 info["Publisher"] = value.strip()
             break
 
+    # Year/Month/Day：与模板路径（create_bangumi_template）同规则同入口
+    # 顶层 date 优先、infobox「发售日」兜底（不用「开始」/「结束」），清洗后空值不写标签
+    # 惰性导入：xml_generator → xml_template_handler → bangumi_fetcher → 本模块，模块级会循环
+    from processors.xml_template_handler import (XMLTemplateHandler,
+                                                 resolve_release_date)
+    release_date = resolve_release_date(detail)
+    if release_date:
+        info.update(XMLTemplateHandler()._extract_year_month(release_date))
+
     return info

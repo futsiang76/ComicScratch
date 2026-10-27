@@ -340,7 +340,13 @@ def update_results_table(mw):
         card_layout.addRow("Web:", QLabel(result.get("web", "")))
         year_str = result.get("year", "")
         month_str = result.get("month", "")
-        date_display = f"{year_str}-{month_str}" if year_str and month_str else (year_str or "")
+        day_str = result.get("day", "")
+        if year_str and month_str and day_str:
+            date_display = f"{year_str}-{month_str}-{day_str}"
+        elif year_str and month_str:
+            date_display = f"{year_str}-{month_str}"
+        else:
+            date_display = year_str or ""
         card_layout.addRow("发行时间:", QLabel(date_display))
         card_layout.addRow("状态:", QLabel(result["status"]))
 
