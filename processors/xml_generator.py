@@ -296,13 +296,12 @@ def build_file_comicinfo(result: Optional[Dict], filename: str, *,
     # Volume/Number：detail 或文件名解析
     apply_volume_number(file_comic_info, filename, detail)
     # Year/Month/Day：detail 无条件优先（逐卷已带本卷值；未命中时它等于系列值，语义等价）
-    # 空值不覆盖，保留 build_full_comicinfo_dict 的系列值；清洗防非数字字符
-    if detail.get("year"):
-        file_comic_info["Year"] = clean_year(detail["year"])
-    if detail.get("month"):
-        file_comic_info["Month"] = clean_month(detail["month"])
-    if detail.get("day"):
-        file_comic_info["Day"] = clean_day(detail["day"])
+    # detail 命中本卷（任一非空）时三字段整组赋值——缺失段写空，绝不回退借系列级（= 第 1 卷）的值，
+    # 否则「单卷 date 只到 YYYY-MM」会把第 1 卷的日混进本卷 XML（与逐卷表显示的空白天不一致）。
+    if detail.get("year") or detail.get("month") or detail.get("day"):
+        file_comic_info["Year"] = clean_year(detail.get("year"))
+        file_comic_info["Month"] = clean_month(detail.get("month"))
+        file_comic_info["Day"] = clean_day(detail.get("day"))
     # 锁住的文件：detail 覆盖 summary（summary/tags 等其它锁定字段行为不变）
     if is_locked and detail.get("summary"):
         file_comic_info["Summary"] = detail["summary"]

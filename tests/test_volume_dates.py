@@ -295,62 +295,8 @@ class TestResultBuilderVolumeDates:
         assert (details["year"], details["month"], details["day"]) == ("2008", "09", "25")
 
 
-# ---------- XML 落地：第 2 卷输出自己那卷的 Day ----------
-
-class TestXmlPerVolumeDay:
-    def _xml_for(self, result, filename):
-        info = build_file_comicinfo(result, filename,
-                                   file_titles=result["file_titles"],
-                                   detail=result["file_details"][filename],
-                                   is_locked=False)
-        return XMLGenerator().generate_comicinfo_xml(info)
-
-    def test_vol2_xml_uses_own_date(self, tmp_path):
-        """端到端：create_bangumi_template(fetcher) → create_result_dict → XML"""
-        _make_cbz(tmp_path, "Vol 01.cbz")
-        _make_cbz(tmp_path, "Vol 02.cbz")
-        f = _FakeFetcher(subjects=[_vol(26562, "オリンポス (1)"),
-                                   _vol(30084, "オリンポス (2)")],
-                         details={26562: {"date": "2008-09-25"},
-                                  30084: {"date": "2009-09-25"}})
-        base = XMLTemplateHandler().create_bangumi_template(
-            {"id": 30085, "name": "オリンポス", "date": "2008-09-25"},
-            {"series": "神的乐园", "author": "某作者", "complete": True, "total_volumes": 2}, f)
-        result = create_result_dict(str(tmp_path), {"series": "神的乐园", "complete": True, "total_volumes": 2}, base,
-                                    {"id": 30085}, False, "处理成功")
-
-        xml1 = self._xml_for(result, "Vol 01.cbz")
-        xml2 = self._xml_for(result, "Vol 02.cbz")
-        assert "<Year>2008</Year>" in xml1 and "<Day>25</Day>" in xml1
-        assert "<Year>2009</Year>" in xml2
-        assert "<Month>09</Month>" in xml2
-        assert "<Day>25</Day>" in xml2
-        assert "<Year>2008</Year>" not in xml2
-        # Day 紧跟 Month
-        assert xml2.index("<Month>") < xml2.index("<Day>")
-
-    def test_fallback_xml_uses_series_date(self, tmp_path):
-        """未命中 → XML 仍是系列日期（第 1 卷值），不猜"""
-        _make_cbz(tmp_path, "Vol 07.cbz")
-        base = _base_with_volumes({"1": "2008-09-25", "2": "2009-09-25"})
-        result = create_result_dict(str(tmp_path), {"series": "神的乐园", "complete": True, "total_volumes": 2}, base,
-                                    {"id": 30085}, False, "处理成功")
-        xml = self._xml_for(result, "Vol 07.cbz")
-        assert "<Year>2008</Year>" in xml and "<Day>25</Day>" in xml
-
-    def test_locked_flag_no_longer_required(self):
-        """改动点：detail 日期不再要求 is_locked 才生效"""
-        info = build_file_comicinfo(
-            {"series": "x", "year": "2008", "month": "09", "day": "25"}, "Vol 02.cbz",
-            detail={"year": "2009", "month": "09", "day": "25", "summary": "单卷摘要"},
-            is_locked=False)
-        assert (info["Year"], info["Month"], info["Day"]) == ("2009", "09", "25")
-        assert info["Summary"] == ""          # summary 仍需 is_locked
-        info_locked = build_file_comicinfo(
-            {"series": "x", "year": "2008", "month": "09", "day": "25"}, "Vol 02.cbz",
-            detail={"year": "2009", "month": "09", "day": "25", "summary": "单卷摘要"},
-            is_locked=True)
-        assert info_locked["Summary"] == "单卷摘要"
+# ---------- XML 落地测试已拆到 tests/test_volume_dates_xml.py（单文件 <=400 行） ----------
+# （第 2 卷用本卷日期 / partial-date 不借系列日 / 空 detail 保持旧行为）
 
 
 # ---------- 系列级编辑不再抹平逐卷日期（EditState.sync_series_values） ----------
