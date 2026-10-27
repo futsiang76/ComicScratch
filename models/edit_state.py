@@ -41,6 +41,31 @@ class EditState:
         """Check if a file is locked."""
         return filename in self.locked_files
 
+    def sync_series_values(self, series_year: str, series_month: str, series_day: str,
+                           series_summary: str = "") -> None:
+        """把系列级值下发到未锁定卷（原 EditDialog.get_data 内联逻辑）
+
+        日期只覆盖「仍沿用系列值」的卷——日期全空，或三格仍等于构造时的系列日期；
+        已带本卷单行本发售日的卷保持原值，避免系列级编辑把逐卷日期抹平。
+        summary 保持原行为：未锁定卷一律同步。
+        """
+        original = (str(self.year or ""), str(self.month or ""), str(self.day or ""))
+        for filename in self.file_titles:
+            if self.is_locked(filename):
+                continue
+            detail = self.file_details.setdefault(filename, {})
+            current = (str(detail.get("year", "") or ""), str(detail.get("month", "") or ""),
+                       str(detail.get("day", "") or ""))
+            if current == ("", "", "") or current == original:
+                if series_year:
+                    detail["year"] = series_year
+                if series_month:
+                    detail["month"] = series_month
+                if series_day:
+                    detail["day"] = series_day
+            if series_summary:
+                detail["summary"] = series_summary
+
     def set_locked(self, filename: str, locked: bool):
         """Set lock state for a file."""
         if locked:

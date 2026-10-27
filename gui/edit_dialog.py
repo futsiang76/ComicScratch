@@ -370,24 +370,12 @@ class EditDialog(QDialog):
         super().accept()
 
     def get_data(self) -> Dict:
-        """获取编辑后的数据，未锁定卷自动同步系列级 year/month/day/summary"""
+        """获取编辑后的数据，未锁定卷自动同步系列级 year/month/day/summary（见 EditState.sync_series_values）"""
         series_year = self.year_edit.text().strip()
         series_month = self.month_edit.text().strip()
         series_day = self.day_edit.text().strip()
         series_summary = self.summary_edit.toPlainText().strip()
-
-        # 同步未锁定卷
-        for fn in self.state.file_titles:
-            if not self.state.is_locked(fn):
-                detail = self.state.file_details.setdefault(fn, {})
-                if series_year:
-                    detail["year"] = series_year
-                if series_month:
-                    detail["month"] = series_month
-                if series_day:
-                    detail["day"] = series_day
-                if series_summary:
-                    detail["summary"] = series_summary
+        self.state.sync_series_values(series_year, series_month, series_day, series_summary)
 
         result = {
             "series": self.series_edit.text(),

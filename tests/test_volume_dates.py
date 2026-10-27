@@ -351,3 +351,50 @@ class TestXmlPerVolumeDay:
             detail={"year": "2009", "month": "09", "day": "25", "summary": "单卷摘要"},
             is_locked=True)
         assert info_locked["Summary"] == "单卷摘要"
+
+
+# ---------- 系列级编辑不再抹平逐卷日期（EditState.sync_series_values） ----------
+
+class TestSeriesEditKeepsVolumeDates:
+    def _state(self):
+        from models.edit_state import EditState
+        return EditState({
+            "series": "神的乐园", "year": "2008", "month": "09", "day": "25",
+            "file_titles": {"Vol 01.cbz": "Vol 01", "Vol 02.cbz": "Vol 02"},
+            "file_details": {
+                "Vol 01.cbz": {"volume": "01", "year": "2008", "month": "09", "day": "25"},
+                "Vol 02.cbz": {"volume": "02", "year": "2009", "month": "09", "day": "25"},
+            },
+            "locked_files": set(),
+        })
+
+    def test_series_date_edit_keeps_own_volume_date(self):
+        """改系列日期 → 仍沿用系列值的第 1 卷跟随，第 2 卷（本卷日期）保持不变"""
+        state = self._state()
+        state.sync_series_values("2015", "01", "02")
+        assert state.file_details["Vol 01.cbz"]["year"] == "2015"
+        assert state.file_details["Vol 02.cbz"]["year"] == "2009"
+        assert state.file_details["Vol 02.cbz"]["day"] == "25"
+
+    def test_series_date_edit_without_date_change_keeps_both(self):
+        """未改日期 → 两卷都保持原值（不做任何覆写）"""
+        state = self._state()
+        state.sync_series_values("2008", "09", "25")
+        assert state.file_details["Vol 02.cbz"]["year"] == "2009"
+        assert state.file_details["Vol 01.cbz"]["year"] == "2008"
+
+    def test_empty_volume_date_still_filled(self):
+        """卷日期为空 → 仍按原行为填充系列值"""
+        state = self._state()
+        state.file_details["Vol 02.cbz"] = {"volume": "02"}
+        state.sync_series_values("2008", "09", "25")
+        assert (state.file_details["Vol 02.cbz"]["year"],
+                state.file_details["Vol 02.cbz"]["month"],
+                state.file_details["Vol 02.cbz"]["day"]) == ("2008", "09", "25")
+
+    def test_locked_volume_untouched(self):
+        """锁定卷一律不同步"""
+        state = self._state()
+        state.locked_files.add("Vol 01.cbz")
+        state.sync_series_values("2015", "01", "02")
+        assert state.file_details["Vol 01.cbz"]["year"] == "2008"
