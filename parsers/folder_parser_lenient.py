@@ -252,6 +252,8 @@ def parse_folder_name_lenient(folder_name, folder_path=None):
                 vol_info = c
                 total_volumes = max(total_volumes, int(mc.group(1)))
                 complete, vol_type = True, "已完结"
+                if "章节版" not in tags:
+                    tags.append("章节版")
                 continue
         m = VOL_RE.search(c)
         if m and is_square:                       # 方括号卷标：整段作 vol_info

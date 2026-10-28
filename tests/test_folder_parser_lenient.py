@@ -340,6 +340,7 @@ class TestChapterCompleteTag:
         assert r["complete"] is True
         assert r["vol_type"] == "已完结"
         assert "C07全" not in r["tags"]
+        assert r["tags"].count("章节版") == 1
 
     def test_c97_convention_code_still_tag(self):
         # 展会码零影响：无「全/完结」→ 照旧进 tags，不算卷数
@@ -348,6 +349,7 @@ class TestChapterCompleteTag:
         assert r["total_volumes"] == 0
         assert r["complete"] is False
         assert "C97" in r["tags"]
+        assert "章节版" not in r["tags"]
 
     def test_v10_complete_regression(self):
         r = _parse("[C.H.LINE×太田垣康男] 前线任务 (V10全)")
@@ -355,6 +357,7 @@ class TestChapterCompleteTag:
         assert r["total_volumes"] == 10
         assert r["complete"] is True
         assert r["vol_type"] == "已完结"
+        assert "章节版" not in r["tags"]
 
     def test_v02_complete_regression(self):
         r = _parse("[あき] 神的乐园 [奥林匹斯] (V02全)")
