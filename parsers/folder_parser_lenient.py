@@ -40,6 +40,9 @@ TAG_BLACKLIST = {
     "授权版", "官方", "台版授权",
 }
 COMPLETE_WORDS = ("全", "完结", "完", "end", "completed", "fin", "complete")
+# 章节型完结：整个圆括号内容仅为 C+数字+全/完结（如 C07全 / C12完结）。
+# VOL_RE 的 C 分支只认 C1-C9 一位数（防 C97 展会码误判），故 C07 以上单独判定。
+_CHAPTER_DONE_RE = re.compile(r"^[Cc]\s*([0-9]{1,4})\s*(?:全|完结)$")
 _HINTS_COMPLETE = ("完结", "end", "completed", "fin", "complete")   # tag 分支只认多字词
 _HINTS_ONGOING = ("未完结", "连载中", "ongoing", "未完")   # 「连载」是版本属性（连载版）非连载状态，不列入
 _CN_DIGITS = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "零": 0}
@@ -243,6 +246,13 @@ def parse_folder_name_lenient(folder_name, folder_path=None):
         if c == "短篇":
             vol_info, total_volumes, vol_type, complete = c, 1, "短篇", False
             continue
+        if not is_square:                          # 章节型完结：(C07全)/(C12完结) → 卷数=数字且完结，不进 tag
+            mc = _CHAPTER_DONE_RE.match(_to_halfwidth(c))
+            if mc:
+                vol_info = c
+                total_volumes = max(total_volumes, int(mc.group(1)))
+                complete, vol_type = True, "已完结"
+                continue
         m = VOL_RE.search(c)
         if m and is_square:                       # 方括号卷标：整段作 vol_info
             vol_info = c

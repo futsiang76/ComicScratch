@@ -326,3 +326,75 @@ class TestWeekdaySeriesName:
         assert r["vol_info"] is None
         assert r["total_volumes"] == 0
         assert "3期" in r["tags"]
+
+
+class TestChapterCompleteTag:
+    """章节型完结 (C07全)/(C12完结) 识别；不影响 (C97) 展会码与 V 型卷标（2026-10-28）"""
+
+    def test_c07_complete_chapter(self):
+        r = _parse("[高桥真] 最终兵器彼女 (C07全)")
+        assert r["author"] == "高桥真"
+        assert r["series"] == "最终兵器彼女"
+        assert r["vol_info"] == "C07全"
+        assert r["total_volumes"] == 7
+        assert r["complete"] is True
+        assert r["vol_type"] == "已完结"
+        assert "C07全" not in r["tags"]
+
+    def test_c97_convention_code_still_tag(self):
+        # 展会码零影响：无「全/完结」→ 照旧进 tags，不算卷数
+        r = _parse("[某社] 同人本 (C97)")
+        assert r["series"] == "同人本"
+        assert r["total_volumes"] == 0
+        assert r["complete"] is False
+        assert "C97" in r["tags"]
+
+    def test_v10_complete_regression(self):
+        r = _parse("[C.H.LINE×太田垣康男] 前线任务 (V10全)")
+        assert r["series"] == "前线任务"
+        assert r["total_volumes"] == 10
+        assert r["complete"] is True
+        assert r["vol_type"] == "已完结"
+
+    def test_v02_complete_regression(self):
+        r = _parse("[あき] 神的乐园 [奥林匹斯] (V02全)")
+        assert r["series"] == "神的乐园"
+        assert r["aliases"] == ["奥林匹斯"]
+        assert r["total_volumes"] == 2
+        assert r["complete"] is True
+        assert r["vol_type"] == "已完结"
+
+    def test_c12_complete_chapter(self):
+        r = _parse("[作者] 某作品 (C12完结)")
+        assert r["vol_info"] == "C12完结"
+        assert r["total_volumes"] == 12
+        assert r["complete"] is True
+        assert r["vol_type"] == "已完结"
+        assert "C12完结" not in r["tags"]
+
+    def test_fullwidth_c07_complete(self):
+        r = _parse("[高桥真] 最终兵器彼女 (Ｃ０７全)")
+        assert r["vol_info"] == "Ｃ０７全"
+        assert r["total_volumes"] == 7
+        assert r["complete"] is True
+        assert "Ｃ０７全" not in r["tags"]
+
+    def test_c1_without_complete_word_unchanged(self):
+        # 原有 C1-C9 单字卷标行为不变
+        r = _parse("[作者] 标题 (C1)")
+        assert r["vol_info"] == "C1"
+        assert r["total_volumes"] == 1
+        assert r["complete"] is False
+
+    def test_c120_without_complete_word_is_tag(self):
+        r = _parse("[作者] 标题 (C120)")
+        assert r["total_volumes"] == 0
+        assert r["complete"] is False
+        assert "C120" in r["tags"]
+
+    def test_c07_with_extra_content_stays_tag(self):
+        # 只认「整段 = C+数字+全/完结」的精确形态，附带其它内容维持原 tag 行为
+        r = _parse("[作者] 标题 (C07全 汉化)")
+        assert r["total_volumes"] == 0
+        assert r["complete"] is False
+        assert "C07全" in r["tags"]
