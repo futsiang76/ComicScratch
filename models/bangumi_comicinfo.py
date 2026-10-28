@@ -113,11 +113,13 @@ def build_comicinfo(detail: Dict, folder_info: Dict,
             break
 
     # Year/Month/Day：与模板路径（create_bangumi_template）同规则同入口
-    # 顶层 date 优先、infobox「发售日」兜底（不用「开始」/「结束」），清洗后空值不写标签
+    # 顶层 date 优先、infobox「发售日」兜底；章节型完结（is_chapter_version）
+    # 且前两处都空时才再用 infobox「开始」兜底（V 型/未知类型绝不用），清洗后空值不写标签
     # 惰性导入：xml_generator → xml_template_handler → bangumi_fetcher → 本模块，模块级会循环
     from processors.xml_template_handler import (XMLTemplateHandler,
                                                  resolve_release_date)
-    release_date = resolve_release_date(detail)
+    release_date = resolve_release_date(
+        detail, allow_ongoing_start=bool(folder_info.get("is_chapter_version")))
     if release_date:
         info.update(XMLTemplateHandler()._extract_year_month(release_date))
 

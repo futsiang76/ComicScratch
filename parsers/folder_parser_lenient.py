@@ -233,6 +233,7 @@ def parse_folder_name_lenient(folder_name, folder_path=None):
     total_volumes = 0
     complete = False
     vol_type = "连载"
+    is_chapter_version = False  # 章节型完结（C07全/C12完结）标记：下游允许用 infobox「开始」兜底日期
     complete_hint = ongoing_hint = False
     for content, open_char in candidates:
         c = content.strip()
@@ -252,6 +253,7 @@ def parse_folder_name_lenient(folder_name, folder_path=None):
                 vol_info = c
                 total_volumes = max(total_volumes, int(mc.group(1)))
                 complete, vol_type = True, "已完结"
+                is_chapter_version = True
                 if "章节版" not in tags:
                     tags.append("章节版")
                 continue
@@ -329,6 +331,7 @@ def parse_folder_name_lenient(folder_name, folder_path=None):
         "total_volumes": total_volumes,
         "vol_type": vol_type,
         "complete": complete,
+        "is_chapter_version": is_chapter_version,
         "has_extras": bool(extras),
         "extras": "+".join(extras),
     }

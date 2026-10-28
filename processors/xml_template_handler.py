@@ -18,19 +18,15 @@ def _with_suffix(value: str, suffix: str) -> str:
     return value
 
 
-def resolve_release_date(detail: Dict[str, Any]) -> str:
-    """取单行本发售日原始串：Bangumi 顶层 date 优先，为空时用 infobox「发售日」兜底。
+# 前导日期正则：从「开始」值（如 2000-05-30 或 1990-10-01 (1990年42号)）里
+# 只取前导的 年-月-日，括号内的「1990年42号」等杂讯不参与匹配
+_LEADING_DATE_RE = re.compile(r"(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})")
 
-    只认顶层 date 与 infobox「发售日」；绝不用 infobox「开始」/「结束」——
-    那两个是连载起止，不是单行本发售日。取不到返回空字符串。
-    """
-    if not detail:
-        return ""
-    date = str(detail.get("date") or "").strip()
-    if date:
-        return date
+
+def _infobox_value(detail: Dict[str, Any], key: str) -> str:
+    """取 infobox 指定 key 的原始值串（value 为 list 时取首个非空 v）。"""
     for item in detail.get("infobox") or []:
-        if item.get("key") != "发售日":
+        if item.get("key") != key:
             continue
         value = item.get("value", "")
         if isinstance(value, list):
@@ -38,6 +34,35 @@ def resolve_release_date(detail: Dict[str, Any]) -> str:
                           if isinstance(v, dict) and v.get("v")), "")
         return str(value or "").strip()
     return ""
+
+
+def resolve_release_date(detail: Dict[str, Any],
+                         allow_ongoing_start: bool = False) -> str:
+    """取日期原始串：顶层 date 优先，空则 infobox「发售日」兜底。
+
+    章节型完结文件夹（is_chapter_version=True）且前两处都空时，才允许用
+    infobox「开始」（连载起始日）再兜底——「开始」值形如 2000-05-30 或
+    1990-10-01 (1990年42号)，用前导日期正则只取年月日（规整为 YYYY-MM-DD），
+    括号内容不混入。单行本（V 标）等其它类型绝不用「开始」/「结束」——
+    那是连载起止，不是单行本发售日。取不到返回空字符串。
+    """
+    if not detail:
+        return ""
+    date = str(detail.get("date") or "").strip()
+    if date:
+        return date
+    sale_date = _infobox_value(detail, "发售日")
+    if sale_date:
+        return sale_date
+    if not allow_ongoing_start:
+        return ""
+    start_raw = _infobox_value(detail, "开始")
+    if not start_raw:
+        return ""
+    m = _LEADING_DATE_RE.search(start_raw)
+    if not m:
+        return ""
+    return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
 
 
 class XMLTemplateHandler:
@@ -176,8 +201,10 @@ class XMLTemplateHandler:
             remaining.append(template.get("Status", ""))
             template["Tags"] = ", ".join(dict.fromkeys(remaining))
         
-        # 处理年份信息（Year/Month/Day 单一入口；顶层 date 为空时 infobox「发售日」兜底）
-        release_date = resolve_release_date(bangumi_data)
+        # 处理年份信息（Year/Month/Day 单一入口；顶层 date 为空时 infobox「发售日」兜底；
+        # 章节型完结（is_chapter_version）且前两处都空时才再用 infobox「开始」兜底）
+        release_date = resolve_release_date(
+            bangumi_data, allow_ongoing_start=bool(folder_info.get("is_chapter_version")))
         if release_date:
             template.update(self._extract_year_month(release_date))
 

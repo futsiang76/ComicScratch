@@ -7,6 +7,7 @@ manhuagui 源抓到的年代正是「1999年」，必须清成纯数字再写入
 import pytest
 
 from processors.xml_generator import clean_day, clean_month, clean_year
+from processors.xml_template_handler import resolve_release_date
 
 
 class TestCleanYear:
@@ -191,3 +192,135 @@ class TestXMLDayOutput:
         xml = XMLGenerator().generate_comicinfo_xml(info)
         assert "<Day>31</Day>" in xml
         assert "<Month>10</Month>" in xml
+
+
+class TestResolveReleaseDateStartGate:
+    """resolve_release_date 的「开始」闸门：默认关（旧行为），章节型才开"""
+
+    @staticmethod
+    def _detail(date="", infobox=None):
+        return {"name": "某系列", "date": date, "infobox": infobox or []}
+
+    def test_default_false_never_reads_start(self):
+        detail = self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}])
+        assert resolve_release_date(detail) == ""
+        assert resolve_release_date(detail, allow_ongoing_start=False) == ""
+
+    def test_allow_true_reads_start_normalized(self):
+        detail = self._detail(
+            infobox=[{"key": "开始", "value": "1990-10-01 (1990年42号)"}])
+        assert resolve_release_date(detail, allow_ongoing_start=True) == "1990-10-01"
+
+    def test_start_list_value(self):
+        detail = self._detail(
+            infobox=[{"key": "开始", "value": [{"v": "2000-05-30"}]}])
+        assert resolve_release_date(detail, allow_ongoing_start=True) == "2000-05-30"
+
+    def test_start_malformed_empty(self):
+        detail = self._detail(infobox=[{"key": "开始", "value": "1990年42号"}])
+        assert resolve_release_date(detail, allow_ongoing_start=True) == ""
+
+    def test_date_wins_over_start(self):
+        detail = self._detail(date="2008-09-25",
+                              infobox=[{"key": "开始", "value": "1900-01-01"}])
+        assert resolve_release_date(detail, allow_ongoing_start=True) == "2008-09-25"
+
+    def test_sale_date_wins_over_start(self):
+        detail = self._detail(infobox=[{"key": "发售日", "value": "2008-09-25"},
+                                       {"key": "开始", "value": "1900-01-01"}])
+        assert resolve_release_date(detail, allow_ongoing_start=True) == "2008-09-25"
+
+
+class TestChapterVersionStartFallback:
+    """章节型完结（C07全/C12完结）：date/发售日都空时用 infobox「开始」兜底
+
+    关键回归：单行本（V 标）与未知类型绝不吃「开始」；未完结章节型
+    （(C12) 不带「全/完结」）不识别为章节型，同样不用「开始」。
+    """
+
+    @staticmethod
+    def _folder(name):
+        from parsers.folder_parser_lenient import parse_folder_name_lenient
+        return parse_folder_name_lenient(name)
+
+    @staticmethod
+    def _detail(date="", infobox=None):
+        return {"name": "某系列", "date": date, "infobox": infobox or []}
+
+    def _template(self, folder_info, detail):
+        # 不带 id 避免走 persons 端点（测试不联网）
+        from processors.xml_template_handler import XMLTemplateHandler
+        return XMLTemplateHandler().create_bangumi_template(detail, folder_info)
+
+    def test_chapter_start_plain_fills_ymd(self):
+        fi = self._folder("[作者甲] 某系列 (C07全)")
+        assert fi["is_chapter_version"] is True
+        t = self._template(fi, self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}]))
+        assert (t["Year"], t["Month"], t["Day"]) == ("2000", "05", "30")
+
+    def test_chapter_start_with_issue_no_suffix(self):
+        fi = self._folder("[作者甲] 某系列 (C12完结)")
+        t = self._template(fi, self._detail(
+            infobox=[{"key": "开始", "value": "1990-10-01 (1990年42号)"}]))
+        assert (t["Year"], t["Month"], t["Day"]) == ("1990", "10", "01")
+
+    def test_chapter_date_wins_over_start(self):
+        fi = self._folder("[作者甲] 某系列 (C07全)")
+        t = self._template(fi, self._detail(date="2008-09-25",
+                                            infobox=[{"key": "开始", "value": "1900-01-01"}]))
+        assert (t["Year"], t["Month"], t["Day"]) == ("2008", "09", "25")
+
+    def test_volume_start_never_used(self):
+        """关键回归：V 型 + date 空 + 开始有值 → Year/Month/Day 全空"""
+        fi = self._folder("[作者甲] 某系列 (V01全)")
+        assert fi["is_chapter_version"] is False
+        t = self._template(fi, self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}]))
+        assert (t["Year"], t["Month"], t["Day"]) == ("", "", "")
+
+    def test_old_folder_info_without_key_unchanged(self):
+        """旧调用方 folder_info 无 is_chapter_version 键 → 行为与改动前一致（不用「开始」）"""
+        fi = self._folder("[作者甲] 某系列 (V01全)")
+        fi.pop("is_chapter_version")
+        t = self._template(fi, self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}]))
+        assert (t["Year"], t["Month"], t["Day"]) == ("", "", "")
+
+    def test_unfinished_chapter_not_chapter_type(self):
+        """未完结章节型 (C12) 不带「全/完结」→ 不识别为章节型，不用「开始」"""
+        fi = self._folder("[作者甲] 某系列 (C12)")
+        assert fi["is_chapter_version"] is False
+        t = self._template(fi, self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}]))
+        assert (t["Year"], t["Month"], t["Day"]) == ("", "", "")
+
+    def test_sale_date_still_wins_over_start(self):
+        fi = self._folder("[作者甲] 某系列 (C07全)")
+        t = self._template(fi, self._detail(infobox=[{"key": "发售日", "value": "2008-09-25"},
+                                                     {"key": "开始", "value": "2000-05-30"}]))
+        assert (t["Year"], t["Month"], t["Day"]) == ("2008", "09", "25")
+
+    def test_chapter_start_rendered_xml(self):
+        from parsers.folder_parser_lenient import parse_folder_name_lenient
+        from processors.xml_generator import XMLGenerator
+        from processors.xml_template_handler import XMLTemplateHandler
+
+        fi = parse_folder_name_lenient("[作者甲] 某系列 (C07全)")
+        template = XMLTemplateHandler().create_bangumi_template(
+            self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}]), fi)
+        xml = XMLGenerator().generate_comicinfo_xml(template)
+        assert "<Year>2000</Year>" in xml
+        assert "<Day>30</Day>" in xml
+
+    def test_build_comicinfo_chapter_start_fills_ymd(self):
+        """build_comicinfo 路径与模板路径同规则：章节型用「开始」兜底"""
+        from models.bangumi_comicinfo import build_comicinfo
+
+        fi = self._folder("[作者甲] 某系列 (C07全)")
+        info = build_comicinfo(self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}]), fi)
+        assert (info["Year"], info["Month"], info["Day"]) == ("2000", "05", "30")
+
+    def test_build_comicinfo_volume_start_never_used(self):
+        """build_comicinfo 路径关键回归：V 型不吃「开始」（无日期则无 Year/Month/Day 键）"""
+        from models.bangumi_comicinfo import build_comicinfo
+
+        fi = self._folder("[作者甲] 某系列 (V01全)")
+        info = build_comicinfo(self._detail(infobox=[{"key": "开始", "value": "2000-05-30"}]), fi)
+        assert "Year" not in info and "Month" not in info and "Day" not in info
