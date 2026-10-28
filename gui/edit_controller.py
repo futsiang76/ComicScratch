@@ -17,7 +17,10 @@ from .utils import _trim_compare_dicts
 
 
 def edit_row(mw, row: int):
-    """编辑指定行（系列级编辑）"""
+    """编辑指定行（系列级编辑）—— 确认且有实际改动后立即落盘（save_single_result）"""
+    results = getattr(mw, "scan_results", None)
+    if not results or row < 0 or row >= len(results):
+        return
     result = mw.scan_results[row]
     original_data = copy.deepcopy(result)
     dialog = EditDialog(result, mw)
@@ -48,14 +51,20 @@ def edit_row(mw, row: int):
             mw.scan_results[row].update(updated_data)
             mw.scan_results[row]["process_status"] = "已修改"
             mw.update_results_table()
+            # 结果页编辑即时落盘：只写当前这一个 result。save_single_result 自带
+            # FIFO 等待队列（任意时刻保存线程 ≤1），不能用 save_changes（它会收集
+            # scan_results 里所有「已修改」结果重复写盘，且可能与扫描线程并发）
+            from .save_handler import save_single_result
+            save_single_result(mw, mw.scan_results[row])
         else:
             print(f"ℹ️  无实际修改，跳过: {result.get('series', '')}")
 
 
 
 def on_results_double_clicked(mw, row: int, column: int):
-    """双击结果表格行 - 弹出各卷信息编辑对话框"""
-    if row < 0 or row >= len(mw.scan_results):
+    """双击结果表格行 - 弹出各卷信息编辑对话框（确认且有改动后立即落盘）"""
+    results = getattr(mw, "scan_results", None)
+    if not results or row < 0 or row >= len(results):
         return
     result = mw.scan_results[row]
     original_titles = copy.deepcopy(result.get("file_titles", {}))
@@ -76,6 +85,10 @@ def on_results_double_clicked(mw, row: int, column: int):
             mw.scan_results[row]["locked_files"] = locked_files
             mw.scan_results[row]["process_status"] = "已修改"
             mw.update_results_table()
+            # 逐卷编辑同样即时落盘：只写当前这一个 result（save_single_result 自带
+            # FIFO 等待队列，任意时刻保存线程 ≤1；不用 save_changes，避免重复写盘）
+            from .save_handler import save_single_result
+            save_single_result(mw, mw.scan_results[row])
         else:
             print(f"ℹ️  各卷信息无实际修改，跳过: {result.get('series', '')}")
 
